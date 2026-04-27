@@ -1,0 +1,30 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+*.egg-info/
+
+# Build artifacts
+dist/
+build/
+site/
+node_modules/
+
+# OS / editor
+.DS_Store
+.vscode/
+
+# Env / secrets
+.env
+.env.*
+
+# Large GTFS datasets and exports
+gtfs_*/
+gtfs_data/
+logs/

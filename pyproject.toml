@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "transport-agent"
+version = "0.1.0"
+description = "Realtime transport intelligence platform"
+requires-python = ">=3.11"
+dependencies = [
+    "python-dotenv>=1.0",
+    "ipykernel>=7.2.0",
+    "jupyter>=1.1.1",
+    "numpy>=2.4.4",
+    "pandas>=3.0.2",
+    "pip>=26.1",
+    "psycopg[binary]>=3.2",
+    "requests>=2.33.1",
+]
+
+[tool.uv]
+package = false

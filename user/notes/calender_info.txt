@@ -1,0 +1,16 @@
+note the calender 
+The Calendar file provides a set of dates when service is available for one or more routes.
+TfNSW require that timetable data provided is projected forward so that customers can view service timetables at least 100 days in advance. This means:
+•
+The start_date should be <today> i.e. the day the GTFS file set was generated. This represents the effective start date of the GTFS file-set bundle.
+•
+The end_date should be at least ( ≥ ) 90 days from <today> and represents the effective end date of the GTFS file-set bundle provided.
+•
+For the time periods where services have not been officially scheduled a timetable projection is required. The projected portion of the timetable should be based on a “standard timetable” which can be any historical timetable the Data Provider deems suitable for each of the 7 day types (Monday through to Sunday). For example:
+o
+If the timetable for Monday the 22nd of February 2016 is considered “standard” then that timetable can be used as the projected timetable for all Mondays in the GTFS file-set where a projection is required. This process can be repeated for all remaining day types (Tuesday through to Sunday).
+o
+Exceptions:
+▪
+Consideration should be given for public holidays, special events and school holidays that are expected to occur within the projection period
+Field specific requirements required by TfNSW in conjunction with the published GTFS standards for the generation of a calendar.txt 
