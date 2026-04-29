@@ -16,6 +16,7 @@ dependencies = [
     "pip>=26.1",
     "psycopg[binary]>=3.2",
     "requests>=2.33.1",
+    "sqlalchemy>=2.0",
 ]
 
 [tool.uv]
