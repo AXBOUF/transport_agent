@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parents[3]
 SCHEMA_NAME = "relationship"
-SOURCE_SCHEMA = os.getenv("SOURCE_SCHEMA")
 
 load_dotenv(ROOT / ".env")
 
@@ -61,7 +60,8 @@ def column_exists(conn: psycopg.Connection, schema_name: str, base_name: str, co
 
 
 def detect_source_schema(conn: psycopg.Connection) -> str:
-    schema_candidates = [SOURCE_SCHEMA] if SOURCE_SCHEMA else ["raw", "staging"]
+    source_schema_override = os.getenv("SOURCE_SCHEMA")
+    schema_candidates = [source_schema_override] if source_schema_override else ["raw", "staging"]
     for schema_name in schema_candidates:
         if schema_name and all(table_exists(conn, schema_name, table_name) for table_name in CORE_TABLES):
             return schema_name

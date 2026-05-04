@@ -16,14 +16,15 @@ CREATE TABLE IF NOT EXISTS staging.gtfs_stops (
     stop_code text,
     stop_name text,
     stop_desc text,
-    stop_lat numeric,
-    stop_lon numeric,
+    stop_lat text,
+    stop_lon text,
     zone_id text,
     stop_url text,
     location_type text,
     parent_station text,
     stop_timezone text,
     wheelchair_boarding text,
+    level_id text,
     platform_code text
 );
 
@@ -36,7 +37,8 @@ CREATE TABLE IF NOT EXISTS staging.gtfs_routes (
     route_type text,
     route_url text,
     route_color text,
-    route_text_color text
+    route_text_color text,
+    exact_times text
 );
 
 CREATE TABLE IF NOT EXISTS staging.gtfs_trips (

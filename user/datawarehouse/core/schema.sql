@@ -33,8 +33,15 @@ CREATE TABLE IF NOT EXISTS core.trip_stop_map (
     trip_id text NOT NULL,
     route_id text,
     stop_id text NOT NULL,
-    stop_sequence integer,
+    stop_sequence integer NOT NULL,
     arrival_time text,
     departure_time text,
-    shape_id text
+    shape_id text,
+    PRIMARY KEY (trip_id, stop_sequence),
+    FOREIGN KEY (route_id) REFERENCES core.routes(route_id),
+    FOREIGN KEY (stop_id) REFERENCES core.platforms(platform_id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_trip_stop_map_stop_id ON core.trip_stop_map(stop_id);
+CREATE INDEX IF NOT EXISTS idx_trip_stop_map_route_id ON core.trip_stop_map(route_id);
+CREATE INDEX IF NOT EXISTS idx_platforms_station_id ON core.platforms(station_id);
