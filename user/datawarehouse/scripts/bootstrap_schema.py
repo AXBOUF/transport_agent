@@ -8,28 +8,28 @@ from dotenv import load_dotenv
 
 
 ROOT = Path(__file__).resolve().parents[3]
-STAGING_SCHEMA = ROOT / "user" / "datawarehouse" / "staging" / "schema.sql"
-CORE_SCHEMA = ROOT / "user" / "datawarehouse" / "core" / "schema.sql"
 
 
-def db_config() -> dict[str, object]:
+def db_config() -> dict:
     load_dotenv(ROOT / ".env")
     return {
         "host": os.getenv("POSTGRES_CONN_HOST", "localhost"),
         "port": int(os.getenv("POSTGRES_CONN_PORT", "5432")),
         "user": os.getenv("POSTGRES_USERNAME"),
         "password": os.getenv("POSTGRES_PASSWORD"),
-        "dbname": os.getenv("POSTGRES_DB"),
+        "dbname": os.getenv("POSTGRES_DB", "transport"),
     }
 
 
 def main() -> None:
-    with psycopg.connect(**db_config()) as conn:
+    cfg = db_config()
+    with psycopg.connect(**cfg) as conn:
         with conn.cursor() as cur:
-            cur.execute(STAGING_SCHEMA.read_text(encoding="utf-8"))
-            cur.execute(CORE_SCHEMA.read_text(encoding="utf-8"))
+            cur.execute("CREATE SCHEMA IF NOT EXISTS staging;")
+            cur.execute("CREATE SCHEMA IF NOT EXISTS core;")
+            cur.execute("CREATE SCHEMA IF NOT EXISTS analysis;")
         conn.commit()
-        print("Created staging and core schemas")
+    print(f"Bootstrapped schemas (staging, core, analysis) in '{cfg['dbname']}'")
 
 
 if __name__ == "__main__":

@@ -1,66 +1,89 @@
 # Datawarehouse Scripts
 
-## Current state
+## Pipeline
 
-One schema is live: **`raw`**
+```
+data/gtfs_*/          staging schema        core schema        analysis schema
+(raw .txt files)  →   (TEXT, PKs, FKs)  →  (typed columns)  →  (empty for now)
+```
 
-All 11 GTFS tables from `gtfs_data/` are loaded into `raw` with every column stored as `TEXT`. Primary keys and foreign key relationships are enforced at the database level — the data is fully relational, just untyped.
+Steps 1 and 2 are rare (only when TfNSW publishes new data or DB is reset).  
+Steps 3 and 4 are the regular refresh cycle.
+
+---
+
+## Databases
+
+| DB name     | Source folder        | Notes                         |
+|-------------|----------------------|-------------------------------|
+| `transport` | `data/gtfs_data/`    | Full dataset — 11 tables      |
+| `metro`     | `data/gtfs_METRO/`   | 9 tables — no levels/pathways |
+| `bus`       | `data/gtfs_BUSES/`   | Future                        |
 
 ---
 
 ## Scripts
 
 ### `bootstrap_schema.py`
-Creates the `staging` and `core` schemas by executing their `schema.sql` files. Not needed for the `raw` load — `load_gtfs_data_raw.py` creates the `raw` schema itself.
+Creates `staging`, `core`, and `analysis` schemas in the target database.  
+Run once per DB after creation, or after a full DB reset.
 
-```
-python user/datawarehouse/scripts/bootstrap_schema.py
+```bash
+POSTGRES_DB=transport python user/datawarehouse/scripts/bootstrap_schema.py
+POSTGRES_DB=metro     python user/datawarehouse/scripts/bootstrap_schema.py
 ```
 
 ---
 
-### `load_gtfs_data_raw.py`
-The active load script. Reads all 11 `.txt` files from `gtfs_data/`, creates the `raw` schema, and loads every table with:
-- All columns as `TEXT`
-- A `PRIMARY KEY` on each table's natural GTFS key
-- 12 foreign key relationships between tables after load
+### `load_staging.py`
+Loads GTFS `.txt` files into the `staging` schema — all columns as `TEXT`, with PKs and FKs.  
+Auto-skips tables whose `.txt` file is absent (e.g. metro has no `levels.txt` or `pathways.txt`).
 
-Safe to rerun — each table is dropped and recreated.
-
-```
-python user/datawarehouse/scripts/load_gtfs_data_raw.py
+```bash
+POSTGRES_DB=transport GTFS_SOURCE=gtfs_data  python user/datawarehouse/scripts/load_staging.py
+POSTGRES_DB=metro     GTFS_SOURCE=gtfs_METRO python user/datawarehouse/scripts/load_staging.py
 ```
 
-PKs and FKs loaded:
+Tables loaded per source:
 
-| Table | Primary Key | Foreign Keys |
-|---|---|---|
-| `agency` | `agency_id` | — |
-| `levels` | `level_id` | — |
-| `notes` | `note_id` | — |
-| `stops` | `stop_id` | → `stops` (parent_station), → `levels` |
-| `routes` | `route_id` | → `agency` |
-| `calendar` | `service_id` | — |
-| `calendar_dates` | `(service_id, date)` | → `calendar` |
-| `shapes` | `(shape_id, shape_pt_sequence)` | — |
-| `trips` | `trip_id` | → `routes`, → `calendar`, → `notes` (trip_note) |
-| `stop_times` | `(trip_id, stop_sequence)` | → `trips`, → `stops`, → `notes` (stop_note) |
-| `pathways` | `pathway_id` | → `stops` (from/to) |
+| Table           | transport (gtfs_data) | metro (gtfs_METRO) |
+|-----------------|-----------------------|--------------------|
+| agency          | ✓                     | ✓                  |
+| stops           | ✓                     | ✓                  |
+| routes          | ✓                     | ✓                  |
+| trips           | ✓                     | ✓                  |
+| stop_times      | ✓                     | ✓                  |
+| calendar        | ✓                     | ✓                  |
+| calendar_dates  | ✓                     | ✓                  |
+| shapes          | ✓                     | ✓                  |
+| notes           | ✓                     | ✓                  |
+| levels          | ✓                     | —                  |
+| pathways        | ✓                     | —                  |
 
 ---
 
-### `build_core.py` — not yet in use
-Transforms `staging.gtfs_stops` into simplified `core.stations` and `core.platforms` tables. Depends on data being in the `staging` schema first.
+### `load_core.py`
+Transforms `staging` → `core` with proper SQL types (TEXT → numeric, smallint, date, etc.).  
+Auto-detects which optional tables/columns exist in staging — safe for both transport and metro.
+
+```bash
+POSTGRES_DB=transport python user/datawarehouse/scripts/load_core.py
+POSTGRES_DB=metro     python user/datawarehouse/scripts/load_core.py
+```
+
+Key type changes from staging:
+- `stop_lat`, `stop_lon` → `numeric`
+- `monday`–`sunday` → `smallint`
+- `start_date`, `end_date`, `date` → `date`
+- `route_type` → `integer`
+- `stop_sequence`, `shape_pt_sequence` → `integer`
+- `shapes` is split into `shapes` (header) + `shape_points` (points)
 
 ---
 
-### `build_relationship_schema.py` — not yet in use
-Future step. Takes the `raw` data and produces a second typed schema (`relationship`) where columns are cast to their correct SQL types (`integer`, `numeric`, `date`), and `shapes` is split into a header table + a points table. Adds full FK constraints on the typed data.
+### `load_analysis.py`
+Placeholder — analysis layer not yet designed.
 
-To run when ready:
-
-```
-python user/datawarehouse/scripts/build_relationship_schema.py
-# or force source schema explicitly:
-SOURCE_SCHEMA=raw python user/datawarehouse/scripts/build_relationship_schema.py
+```bash
+python user/datawarehouse/scripts/load_analysis.py
 ```

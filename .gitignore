@@ -28,3 +28,15 @@ node_modules/
 gtfs_*/
 gtfs_data/
 logs/
+
+data/gtfs_*/
+data/gtfs_data/
+data/gtfs_METRO/
+data/gtfs_BUSES/
+
+
+
+data/gtfs_*/*
+data/gtfs_data/*
+data/gtfs_METRO/*
+data/gtfs_BUSES/*
