@@ -1,0 +1,25 @@
+digraph {
+	agency
+	calendar
+	calendar_dates
+	levels
+	notes
+	pathways
+	routes
+	shapes
+	stop_times
+	stops
+	trips
+	levels -> levels [label=level_id]
+	notes -> notes [label=note_id]
+	pathways -> pathways [label=pathway_id]
+	routes -> routes [label=route_id]
+	shapes -> shapes [label=shape_id]
+	stop_times -> trips [label=trip_id]
+	stop_times -> stops [label=stop_id]
+	stops -> stops [label=stop_id]
+	stops -> levels [label=level_id]
+	trips -> routes [label=route_id]
+	trips -> trips [label=trip_id]
+	trips -> shapes [label=shape_id]
+}

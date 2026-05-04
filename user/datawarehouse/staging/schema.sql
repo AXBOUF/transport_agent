@@ -87,6 +87,12 @@ CREATE TABLE IF NOT EXISTS staging.gtfs_calendar_dates (
     exception_type text
 );
 
+CREATE TABLE IF NOT EXISTS staging.gtfs_levels (
+    level_id text,
+    level_index text,
+    level_name text
+);
+
 CREATE TABLE IF NOT EXISTS staging.gtfs_shapes (
     shape_id text,
     shape_pt_lat text,
@@ -98,4 +104,13 @@ CREATE TABLE IF NOT EXISTS staging.gtfs_shapes (
 CREATE TABLE IF NOT EXISTS staging.gtfs_notes (
     note_id text,
     note_text text
+);
+
+CREATE TABLE IF NOT EXISTS staging.gtfs_pathways (
+    pathway_id text,
+    from_stop_id text,
+    to_stop_id text,
+    pathway_mode text,
+    is_bidirectional text,
+    traversal_time text
 );

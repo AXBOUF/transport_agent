@@ -38,8 +38,18 @@ TABLES = {
     "stop_times": "stop_times.txt",
     "calendar": "calendar.txt",
     "calendar_dates": "calendar_dates.txt",
+    "levels": "levels.txt",
     "shapes": "shapes.txt",
     "notes": "notes.txt",
+    "pathways": "pathways.txt",
+}
+
+UNIQUE_KEYS = {
+    "agency": ["agency_id"],
+    "stops": ["stop_id"],
+    "routes": ["route_id"],
+    "trips": ["trip_id"],
+    "calendar": ["service_id"],
 }
 
 # Foreign keys are added after load, mirroring the requested relationships.
@@ -76,14 +86,18 @@ engine = create_engine(build_db_url())
 
 
 def create_table(conn, table_name: str, file_path: Path) -> None:
-    df = pd.read_csv(file_path)
+    df = pd.read_csv(file_path, dtype="string")
 
-    columns = [f'"{col}" TEXT' for col in df.columns]
+    definitions = [f'"{col}" TEXT' for col in df.columns]
+    unique_columns = UNIQUE_KEYS.get(table_name)
+    if unique_columns:
+        constraint_columns = ", ".join(f'"{col}"' for col in unique_columns)
+        definitions.append(f"UNIQUE ({constraint_columns})")
 
     create_sql = f"""
     DROP TABLE IF EXISTS raw.{table_name} CASCADE;
     CREATE TABLE raw.{table_name} (
-        {", ".join(columns)}
+        {",\n        ".join(definitions)}
     );
     """
 
@@ -93,10 +107,19 @@ def create_table(conn, table_name: str, file_path: Path) -> None:
 
 
 def load_data(conn, table_name: str, file_path: Path) -> None:
-    df = pd.read_csv(file_path)
+    df = pd.read_csv(file_path, dtype="string")
     df = df.astype("string").where(pd.notna(df), None)
     df.to_sql(table_name, con=conn, schema="raw", if_exists="append", index=False)
     print(f"Loaded data: raw.{table_name} ({len(df)} rows)")
+
+
+def add_relations(conn) -> None:
+    for relation_sql in RELATIONS:
+        try:
+            with conn.begin_nested():
+                conn.execute(text(relation_sql))
+        except Exception as exc:
+            print("FK warning:", exc)
 
 
 def main() -> None:
@@ -111,11 +134,8 @@ def main() -> None:
             create_table(conn, table, source)
             load_data(conn, table, source)
 
-        for relation_sql in RELATIONS:
-            try:
-                conn.execute(text(relation_sql))
-            except Exception as exc:
-                print("FK warning:", exc)
+    with engine.begin() as conn:
+        add_relations(conn)
 
     print("Raw schema load complete")
 

@@ -1,0 +1,108 @@
+Table agency {
+  agency_id varchar [ref: > agencys.agency_id]
+  agency_name varchar
+  agency_url varchar
+  agency_timezone varchar
+  agency_lang varchar
+  agency_phone varchar
+}
+
+Table calendar {
+  service_id varchar [ref: > services.service_id]
+  monday varchar
+  tuesday varchar
+  wednesday varchar
+  thursday varchar
+  friday varchar
+  saturday varchar
+  sunday varchar
+  start_date varchar
+  end_date varchar
+}
+
+Table calendar_dates {
+  service_id varchar [ref: > services.service_id]
+  date varchar
+  exception_type varchar
+}
+
+Table levels {
+  level_id varchar
+  level_index varchar
+  level_name varchar
+}
+
+Table notes {
+  note_id varchar
+  note_text varchar
+}
+
+Table pathways {
+  pathway_id varchar
+  from_stop_id varchar [ref: > from_stops.from_stop_id]
+  to_stop_id varchar [ref: > to_stops.to_stop_id]
+  pathway_mode varchar
+  is_bidirectional varchar
+  traversal_time varchar
+}
+
+Table routes {
+  route_id varchar
+  agency_id varchar [ref: > agencys.agency_id]
+  route_short_name varchar
+  route_long_name varchar
+  route_desc varchar
+  route_type varchar
+  route_color varchar
+  route_text_color varchar
+  exact_times varchar
+}
+
+Table shapes {
+  shape_id varchar
+  shape_pt_lat varchar
+  shape_pt_lon varchar
+  shape_pt_sequence varchar
+  shape_dist_traveled varchar
+}
+
+Table stop_times {
+  trip_id varchar [ref: > trips.trip_id]
+  arrival_time varchar
+  departure_time varchar
+  stop_id varchar [ref: > stops.stop_id]
+  stop_sequence varchar
+  stop_headsign varchar
+  pickup_type varchar
+  drop_off_type varchar
+  shape_dist_traveled varchar
+  timepoint varchar
+  stop_note varchar
+}
+
+Table stops {
+  stop_id varchar
+  stop_code varchar
+  stop_name varchar
+  stop_lat varchar
+  stop_lon varchar
+  location_type varchar
+  parent_station varchar
+  wheelchair_boarding varchar
+  level_id varchar [ref: > levels.level_id]
+  platform_code varchar
+}
+
+Table trips {
+  route_id varchar [ref: > routes.route_id]
+  service_id varchar [ref: > services.service_id]
+  trip_id varchar
+  shape_id varchar [ref: > shapes.shape_id]
+  trip_headsign varchar
+  direction_id varchar [ref: > directions.direction_id]
+  block_id varchar [ref: > blocks.block_id]
+  wheelchair_accessible varchar
+  route_direction varchar
+  trip_note varchar
+  bikes_allowed varchar
+}

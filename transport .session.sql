@@ -23,7 +23,26 @@
 
 -- CREATE TABLE calendar (
 --     service_id TEXT PRIMARY KEY,
+--     monday INT,CREATE TABLE stops (
+--     stop_id TEXT PRIMARY KEY,
+--     stop_name TEXT,
+--     stop_lat NUMERIC(10,6),
+--     stop_lon NUMERIC(10,6),
+--     location_type INT,
+--     parent_station TEXT,
+--     wheelchair_boarding INT
+-- );CREATE TABLE calendar (
+--     service_id TEXT PRIMARY KEY,
 --     monday INT,
+--     tuesday INT,
+--     wednesday INT,
+--     thursday INT,
+--     friday INT,
+--     saturday INT,
+--     sunday INT,
+--     start_date DATE,
+--     end_date DATE
+-- );
 --     tuesday INT,
 --     wednesday INT,
 --     thursday INT,
@@ -132,26 +151,32 @@
 -- FROM 'C:\Users\Public\transport\gtfs_data\routes.txt'
 -- DELIMITER ','
 -- CSV HEADER;
-DROP TABLE IF EXISTS stops CASCADE;
+-- DROP TABLE IF EXISTS stops CASCADE;
 
-CREATE TABLE stops (
-    stop_id TEXT PRIMARY KEY,
-    stop_code TEXT,
-    stop_name TEXT NOT NULL,
-    stop_lat NUMERIC(10,6),
-    stop_lon NUMERIC(10,6),
-    location_type SMALLINT,
-    parent_station TEXT REFERENCES stops(stop_id),
-    wheelchair_boarding SMALLINT,
-    level_id TEXT,
-    platform_code TEXT
-);
+-- CREATE TABLE stops (
+--     stop_id TEXT PRIMARY KEY,
+--     stop_code TEXT,
+--     stop_name TEXT NOT NULL,
+--     stop_lat NUMERIC(10,6),
+--     stop_lon NUMERIC(10,6),
+--     location_type SMALLINT,
+--     parent_station TEXT REFERENCES stops(stop_id),
+--     wheelchair_boarding SMALLINT,
+--     level_id TEXT,
+--     platform_code TEXT
+-- );
 
-\copy stops
-FROM 'C:/gtfs/stops.txt'
-DELIMITER ','
-CSV HEADER
-NULL '';
+
+-- copy stops
+-- FROM 'C:\Users\Public\transport\gtfs_data\stops.txt'
+-- DELIMITER ','
+-- CSV HEADER
+-- NULL '';
+
+-- ALTER TABLE stops
+-- ADD CONSTRAINT fk_parent_station
+-- FOREIGN KEY (parent_station)
+-- REFERENCES stops(stop_id);
 
 -- COPY trips
 -- FROM 'C:\Users\Public\transport\gtfs_data\trips.txt'
@@ -167,3 +192,13 @@ NULL '';
 -- FROM 'C:\Users\Public\transport\gtfs_data\stop_times.txt'
 -- DELIMITER ','
 -- CSV HEADER;
+
+-- verify counts
+SELECT 'agency', count(*) FROM raw.agency;
+SELECT 'routes', count(*) FROM raw.routes;
+-- check duplicates on referenced columns
+SELECT agency_id, count(*) FROM raw.agency GROUP BY agency_id HAVING count(*)>1 LIMIT 20;
+SELECT route_id, count(*) FROM raw.routes GROUP BY route_id HAVING count(*)>1 LIMIT 20;
+SELECT trip_id, count(*) FROM raw.trips GROUP BY trip_id HAVING count(*)>1 LIMIT 20;
+SELECT stop_id, count(*) FROM raw.stops GROUP BY stop_id HAVING count(*)>1 LIMIT 20;
+SELECT service_id, count(*) FROM raw.calendar GROUP BY service_id HAVING count(*)>1 LIMIT 20;
