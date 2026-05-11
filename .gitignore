@@ -24,6 +24,9 @@ node_modules/
 .env
 .env.*
 
+# Local database files
+*.db
+
 # Large GTFS datasets and exports
 gtfs_*/
 gtfs_data/
