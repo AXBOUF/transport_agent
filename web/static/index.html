@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -12,8 +12,8 @@
 
     <header id="topbar">
       <div class="logo">
-        <span class="logo-icon">🚆</span>
-        <span class="logo-text">Transport NSW Live</span>
+        <img src="/design/Train_Mode_White_Background_400x400.png" class="logo-img" alt="NSW Trains"/>
+        <span class="logo-text">Transport NSW <span class="logo-live">Live</span></span>
       </div>
       <div class="controls">
         <div class="control-group">
@@ -30,8 +30,15 @@
           Updated <span id="last-updated">—</span>
         </div>
         <button class="btn-icon" id="refresh-btn" onclick="refreshAll()" title="Refresh now">⟳</button>
+        <button class="btn-icon" id="theme-btn"   onclick="toggleThemePicker()" title="Map theme">◑</button>
       </div>
     </header>
+
+    <!-- Floating theme picker -->
+    <div id="theme-picker" class="hidden">
+      <div class="theme-picker-label">Map Theme</div>
+      <div id="theme-swatches" class="theme-swatches"></div>
+    </div>
 
     <div id="alerts-bar" class="hidden">
       <span class="alert-icon">⚠</span>
@@ -44,11 +51,14 @@
 
       <aside id="chat-panel">
         <div id="chat-header">
+          <img src="/design/Train_Mode_White_Background_400x400.png" class="chat-header-icon" alt=""/>
           <span>Ask the agent</span>
         </div>
         <div id="messages">
           <div class="msg agent">
-            <div class="avatar">🤖</div>
+            <div class="avatar">
+              <img src="/design/Train_Mode_White_Background_400x400.png" class="avatar-img" alt=""/>
+            </div>
             <div class="bubble">
               Hi! Ask me about live vehicle positions, upcoming departures, or service alerts for Metro and Sydney Trains.
             </div>
@@ -67,17 +77,73 @@
 
       <div id="map-container">
         <div id="map"></div>
-        <div id="map-legend">
-          <div class="legend-item" id="legend-metro">
-            <span class="legend-dot" style="background:#009FDB"></span> Metro
+
+        <!-- Routes panel — top-left of map -->
+        <div id="routes-panel">
+          <div id="routes-panel-header" onclick="toggleRoutesPanel()">
+            <span>Lines</span>
+            <span id="routes-chevron">▾</span>
           </div>
-          <div class="legend-item" id="legend-sydneytrains" style="display:none">
-            <span class="legend-dot" style="background:#F5A623"></span> Sydney Trains
+          <div id="routes-list"></div>
+        </div>
+
+        <!-- Trip side panel — slides in from right when a vehicle is clicked -->
+        <div id="trip-panel" class="hidden">
+          <button class="trip-panel-close" onclick="closeTripPanel()">✕</button>
+          <div id="trip-panel-banner">
+            <div id="trip-panel-chip"></div>
+            <div id="trip-panel-dest"></div>
+          </div>
+          <div id="trip-panel-status"></div>
+          <div id="trip-panel-body">
+            <div class="trip-loading">Loading route…</div>
           </div>
         </div>
+
+        <!-- Chart overlay — shown when agent renders a chart -->
+        <div id="chart-overlay" class="hidden">
+          <div id="chart-header">
+            <span id="chart-title-label"></span>
+            <button id="chart-close" onclick="closeChart()" title="Close chart">✕</button>
+          </div>
+          <div id="chart-body">
+            <canvas id="chart-canvas"></canvas>
+          </div>
+        </div>
+
+        <div id="map-legend">
+          <div class="legend-section">
+            <div class="legend-label">Network</div>
+            <div class="legend-item" id="legend-metro">
+              <span class="legend-dot" style="background:#009FDB"></span> Metro
+            </div>
+            <div class="legend-item" id="legend-sydneytrains" style="display:none">
+              <span class="legend-dot" style="background:#F5A623"></span> Sydney Trains
+            </div>
+          </div>
+          <div class="legend-divider"></div>
+          <div class="legend-section">
+            <div class="legend-label">Delay</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#22c55e"></span> On time</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#f97316"></span> &lt;5 min</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#ef4444"></span> 5+ min</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#475569"></span> No RT data</div>
+          </div>
+          <div class="legend-divider"></div>
+          <div class="legend-section">
+            <div class="legend-label">Stops</div>
+            <div class="legend-item"><span class="legend-stop station"></span> Station</div>
+            <div class="legend-item"><span class="legend-stop platform"></span> Platform</div>
+          </div>
+          <div class="legend-divider"></div>
+          <button class="legend-toggle-btn" id="stops-toggle" onclick="toggleStops()">
+            Show stops
+          </button>
+        </div>
+
         <div id="no-vehicles" class="hidden">
           <div class="no-vehicles-msg">
-            <span>📡</span>
+            <img src="/design/Train_Mode_White_Background_400x400.png" class="no-veh-icon" alt=""/>
             <p>No vehicles visible yet.</p>
             <small>Start <code>test_realtime.py</code> to begin collecting live data.</small>
           </div>
@@ -88,6 +154,7 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

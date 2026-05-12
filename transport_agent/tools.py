@@ -180,15 +180,17 @@ ANTHROPIC_TOOLS = [
         "name": "get_vehicle_position",
         "description": (
             "Get the current real-time position and status of vehicles on a route or trip. "
-            "Returns latitude, longitude, bearing, speed, current stop, and occupancy. "
-            "Only available for metro and sydneytrains."
+            "Returns latitude, longitude, bearing, speed, current stop, delay, and destination. "
+            "transport_type auto searches both metro and sydneytrains. "
+            "Use route_name to filter by a line name like 'T1' or 'M1'."
         ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "route_id":       {"type": "string",  "description": "Exact route_id to filter by"},
                 "trip_id":        {"type": "string",  "description": "Exact trip_id to filter by"},
-                "transport_type": {"type": "string",  "description": "metro (default) or sydneytrains"},
+                "route_name":     {"type": "string",  "description": "Partial route name to filter by, e.g. 'T1', 'M1'"},
+                "transport_type": {"type": "string",  "description": "auto (default, searches metro + sydneytrains), metro, or sydneytrains"},
                 "limit":          {"type": "integer", "description": "Number of vehicles, defaults to 10"},
             },
         },
@@ -246,6 +248,58 @@ ANTHROPIC_TOOLS = [
                 "transport_type": {"type": "string", "description": "metro (default), sydneytrains, transport, or buses"},
             },
             "required": ["table_name"],
+        },
+    },
+    {
+        "name": "render_chart",
+        "description": (
+            "Render a chart in the UI canvas. Call this after gathering data whenever a visual "
+            "would be clearer than text. Pick the best chart type for the data: "
+            "'line' for trends over time, 'bar' for comparisons, 'pie'/'doughnut' for proportions. "
+            "You can call this AND return a text answer — the chart appears alongside your reply."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "type":   {"type": "string", "enum": ["bar", "line", "pie", "doughnut"],
+                           "description": "Chart type"},
+                "title":  {"type": "string", "description": "Chart title shown above the chart"},
+                "x_label":{"type": "string", "description": "X-axis label (bar/line only)"},
+                "y_label":{"type": "string", "description": "Y-axis label (bar/line only)"},
+                "labels": {"type": "array",  "items": {"type": "string"},
+                           "description": "Category labels (x-axis for bar/line, slice names for pie)"},
+                "datasets": {
+                    "type": "array",
+                    "description": "One entry per data series",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "label": {"type": "string",  "description": "Series name shown in legend"},
+                            "data":  {"type": "array",   "items": {"type": "number"}},
+                            "color": {"type": "string",  "description": "Hex color e.g. #F5A623 (optional)"},
+                        },
+                        "required": ["label", "data"],
+                    },
+                },
+            },
+            "required": ["type", "title", "labels", "datasets"],
+        },
+    },
+    {
+        "name": "run_sql",
+        "description": (
+            "Run a read-only SELECT query directly against a transport database. "
+            "Use this for any question that the pre-built tools cannot answer — "
+            "platform counts, stop lookups, route listings, custom aggregations, etc. "
+            "Only SELECT is allowed. Results capped at 100 rows."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query":          {"type": "string",  "description": "A valid PostgreSQL SELECT statement"},
+                "transport_type": {"type": "string",  "description": "metro (default), sydneytrains, transport, or buses"},
+            },
+            "required": ["query"],
         },
     },
 ]
@@ -421,51 +475,44 @@ def get_active_alerts(transport_type: str = "metro") -> str:
     } for r in rows])
 
 
-def get_vehicle_position(
-    route_id: str | None = None,
-    trip_id: str | None = None,
-    transport_type: str = "metro",
-    limit: int = 10,
-) -> str:
-    filters = []
-    params: list = []
+def _query_vehicle_position(
+    transport_type: str,
+    route_id: str | None,
+    trip_id: str | None,
+    route_name: str | None,
+    limit: int,
+) -> list[dict]:
+    filters: list[str] = []
+    params:  list      = []
 
     if route_id:
-        filters.append("route_id = %s")
-        params.append(route_id)
+        filters.append("route_id = %s");    params.append(route_id)
     if trip_id:
-        filters.append("trip_id = %s")
-        params.append(trip_id)
+        filters.append("trip_id = %s");     params.append(trip_id)
+    if route_name:
+        filters.append("route_name ILIKE %s"); params.append(f"%{route_name}%")
 
     where = ("WHERE " + " AND ".join(filters)) if filters else ""
     params.append(limit)
 
-    with psycopg.connect(db_url(transport_type)) as conn:
-        rows = conn.execute(f"""
-            SELECT
-                vehicle_id,
-                trip_id,
-                route_id,
-                route_short_name,
-                latitude,
-                longitude,
-                bearing,
-                speed,
-                current_status,
-                stop_name,
-                stop_sequence,
-                occupancy_status,
-                fetched_at
-            FROM analysis.live_vehicle_positions
-            {where}
-            ORDER BY fetched_at DESC
-            LIMIT %s
-        """, params).fetchall()
+    try:
+        with psycopg.connect(db_url(transport_type)) as conn:
+            rows = conn.execute(f"""
+                SELECT
+                    vehicle_id, trip_id, route_id, route_name,
+                    latitude, longitude, bearing, speed,
+                    current_status, delay_seconds,
+                    next_stop_name, destination,
+                    occupancy_status, transport_type, updated_at
+                FROM analysis.agent_live_vehicle_state
+                {where}
+                ORDER BY updated_at DESC
+                LIMIT %s
+            """, params).fetchall()
+    except Exception:
+        return []
 
-    if not rows:
-        return json.dumps({"message": "No vehicles found matching the given filters"})
-
-    return json.dumps([{
+    return [{
         "vehicle_id":    r[0],
         "trip_id":       r[1],
         "route_id":      r[2],
@@ -473,13 +520,37 @@ def get_vehicle_position(
         "latitude":      _f(r[4]),
         "longitude":     _f(r[5]),
         "bearing":       _f(r[6]),
-        "speed_m_s":     _f(r[7]),
+        "speed_kmh":     round(_f(r[7]) * 3.6, 1) if r[7] else None,
         "status":        r[8],
-        "at_stop":       r[9],
-        "stop_sequence": r[10],
-        "occupancy":     r[11],
-        "as_of":         r[12].strftime("%H:%M:%S") if r[12] else None,
-    } for r in rows])
+        "delay_seconds": r[9],
+        "next_stop":     r[10],
+        "destination":   r[11],
+        "occupancy":     r[12],
+        "network":       r[13],
+        "as_of":         r[14].strftime("%H:%M:%S") if r[14] else None,
+    } for r in rows]
+
+
+def get_vehicle_position(
+    route_id: str | None = None,
+    trip_id: str | None = None,
+    route_name: str | None = None,
+    transport_type: str = "auto",
+    limit: int = 10,
+) -> str:
+    targets = _LIVE_DBS if transport_type == "auto" else [transport_type]
+    results = []
+
+    for tt in targets:
+        results.extend(_query_vehicle_position(tt, route_id, trip_id, route_name, limit))
+
+    results.sort(key=lambda r: r["as_of"] or "", reverse=True)
+    results = results[:limit]
+
+    if not results:
+        return json.dumps({"message": "No live vehicle positions found. Check that test_realtime.py is running."})
+
+    return json.dumps(results)
 
 
 def get_delay_trend(
@@ -611,6 +682,31 @@ def describe_table(table_name: str, schema: str | None = None, transport_type: s
     return json.dumps([{"column": r[0], "type": r[1]} for r in rows])
 
 
+def run_sql(query: str, transport_type: str = "metro") -> str:
+    q = query.strip()
+    if not q.lower().startswith("select"):
+        return json.dumps({"error": "Only SELECT queries are allowed."})
+    try:
+        with psycopg.connect(db_url(transport_type)) as conn:
+            cur = conn.execute(q)
+            cols = [desc[0] for desc in cur.description]
+            rows = cur.fetchmany(100)
+        results = []
+        for row in rows:
+            record = {}
+            for col, val in zip(cols, row):
+                if hasattr(val, "strftime"):
+                    record[col] = val.strftime("%Y-%m-%d %H:%M:%S")
+                elif hasattr(val, "__float__"):
+                    record[col] = _f(val)
+                else:
+                    record[col] = val
+            results.append(record)
+        return json.dumps({"columns": cols, "rows": results, "count": len(results)})
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
+
 # ── Dispatch ──────────────────────────────────────────────────────────────────
 
 def run_tool(name: str, inputs: dict) -> str:
@@ -640,6 +736,7 @@ def run_tool(name: str, inputs: dict) -> str:
         return get_vehicle_position(
             route_id=inputs.get("route_id"),
             trip_id=inputs.get("trip_id"),
+            route_name=inputs.get("route_name"),
             transport_type=transport,
             limit=int(inputs.get("limit", 10)),
         )
@@ -662,5 +759,12 @@ def run_tool(name: str, inputs: dict) -> str:
         if not table:
             return json.dumps({"error": "missing 'table_name' in input"})
         return describe_table(table, inputs.get("schema"), transport_type=transport)
+    if name == "run_sql":
+        query = inputs.get("query") or inputs.get("sql")
+        if not query:
+            return json.dumps({"error": "missing 'query'"})
+        return run_sql(query, transport_type=transport)
+    if name == "render_chart":
+        return json.dumps({"status": "chart rendered in UI"})
 
     return json.dumps({"error": f"unknown tool: {name}"})

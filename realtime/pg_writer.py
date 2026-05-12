@@ -263,10 +263,9 @@ def write_trip_updates(data: dict, transport_type: str) -> None:
             feed_ts,
         ))
 
-        for stu in tu.get("stop_time_update", []):
-            stop_seq = _int(stu.get("stop_sequence"))
-            if stop_seq is None:
-                continue
+        for pos, stu in enumerate(tu.get("stop_time_update", [])):
+            # Sydney Trains omits stop_sequence — use list position as fallback
+            stop_seq = _int(stu.get("stop_sequence")) if stu.get("stop_sequence") is not None else pos
             arrival   = stu.get("arrival",   {})
             departure = stu.get("departure", {})
             stu_rows.append((

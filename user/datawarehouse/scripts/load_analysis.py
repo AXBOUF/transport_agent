@@ -527,6 +527,74 @@ BASE_DDL_STEPS: list[tuple[str, str]] = [
     ("view: agent_trip_summary",    _VIEW_AGENT_TRIP_SUMMARY),
     ("view: agent_stop_frequency",  _VIEW_AGENT_STOP_FREQUENCY),
     ("view: agent_transfer_hubs",   _VIEW_AGENT_TRANSFER_HUBS),
+    # ── Live views — join analysis + realtime schemas ─────────────────────────
+    ("view: live_departures",       """\
+CREATE VIEW analysis.live_departures AS
+SELECT
+    e.stop_name,
+    e.route_name,
+    e.trip_headsign,
+    e.scheduled_departure_ts,
+    CASE
+        WHEN stu.departure_delay IS NOT NULL
+        THEN e.scheduled_departure_ts + make_interval(secs := stu.departure_delay)
+        ELSE e.scheduled_departure_ts
+    END                                         AS estimated_departure_ts,
+    stu.departure_delay,
+    stu.schedule_relationship,
+    vp.current_status,
+    vp.latitude                                 AS vehicle_lat,
+    vp.longitude                                AS vehicle_lon,
+    vp.occupancy_status,
+    (stu.trip_id IS NOT NULL)                   AS has_realtime,
+    COALESCE(stu.fetched_at, vp.fetched_at)     AS rt_fetched_at
+FROM analysis.fact_scheduled_stop_events e
+LEFT JOIN realtime.rt_stop_time_updates stu
+       ON stu.trip_id = e.trip_id
+      AND stu.stop_id = e.stop_id
+LEFT JOIN realtime.rt_vehicle_positions vp
+       ON vp.trip_id = e.trip_id
+WHERE e.service_date = CURRENT_DATE
+  AND e.scheduled_departure_ts >= now() - interval '10 minutes'
+  AND e.scheduled_departure_ts <  now() + interval '2.5 hours'
+"""),
+    ("view: live_alerts",           """\
+CREATE VIEW analysis.live_alerts AS
+SELECT
+    entity_id, cause, effect,
+    header_text, description_text,
+    route_ids, active_start, active_end, fetched_at
+FROM realtime.rt_alerts
+"""),
+    ("view: agent_live_vehicle_state", """\
+CREATE VIEW analysis.agent_live_vehicle_state AS
+SELECT
+    vp.vehicle_id,
+    vp.trip_id,
+    vp.route_id,
+    COALESCE(r.route_short_name, r.route_long_name, vp.route_id) AS route_name,
+    r.route_color,
+    vp.latitude,
+    vp.longitude,
+    vp.bearing,
+    vp.speed,
+    vp.current_status,
+    stu.departure_delay     AS delay_seconds,
+    s.stop_name             AS next_stop_name,
+    vp.stop_sequence        AS next_stop_sequence,
+    t.trip_headsign         AS destination,
+    vp.occupancy_status,
+    vp.congestion_level,
+    vp.transport_type,
+    vp.fetched_at           AS updated_at
+FROM realtime.rt_vehicle_positions vp
+LEFT JOIN core.routes r ON r.route_id = vp.route_id
+LEFT JOIN core.stops  s ON s.stop_id  = vp.stop_id
+LEFT JOIN core.trips  t ON t.trip_id  = vp.trip_id
+LEFT JOIN realtime.rt_stop_time_updates stu
+       ON stu.trip_id = vp.trip_id
+      AND stu.stop_id = vp.stop_id
+"""),
 ]
 
 SYDNEYTRAINS_EXTRA_STEPS: list[tuple[str, str]] = [
