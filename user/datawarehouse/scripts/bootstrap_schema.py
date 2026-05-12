@@ -26,9 +26,10 @@ def db_config() -> dict:
     }
 
 db_list = [
-    os.getenv("POSTGRES_DB_TRANSPORT", "transport"),
-    os.getenv("POSTGRES_DB_METRO", "metro"),
-    os.getenv("POSTGRES_DB_BUSES", "buses"),
+    os.getenv("POSTGRES_DB_TRANSPORT",    "transport"),
+    os.getenv("POSTGRES_DB_METRO",        "metro"),
+    os.getenv("POSTGRES_DB_BUSES",        "buses"),
+    os.getenv("POSTGRES_DB_SYDNEYTRAINS", "sydneytrains"),
 ]
 
 
@@ -77,8 +78,9 @@ def main() -> None:
                     cur.execute("CREATE SCHEMA IF NOT EXISTS staging;")
                     cur.execute("CREATE SCHEMA IF NOT EXISTS core;")
                     cur.execute("CREATE SCHEMA IF NOT EXISTS analysis;")
+                    cur.execute("CREATE SCHEMA IF NOT EXISTS realtime;")
                 conn.commit()
-            print(f"  Bootstrapped schemas (staging, core, analysis) in '{db_name}'\n")
+            print(f"  Bootstrapped schemas (staging, core, analysis, realtime) in '{db_name}'\n")
         except Exception as exc:
             print(f"  Error bootstrapping schemas in '{db_name}': {exc}\n")
 

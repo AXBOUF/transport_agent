@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Transport NSW Live</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="/static/style.css"/>
+</head>
+<body>
+  <div id="app">
+
+    <header id="topbar">
+      <div class="logo">
+        <span class="logo-icon">🚆</span>
+        <span class="logo-text">Transport NSW Live</span>
+      </div>
+      <div class="controls">
+        <div class="control-group">
+          <label for="transport-select">Network</label>
+          <select id="transport-select" onchange="onTransportChange()">
+            <option value="metro">Metro</option>
+            <option value="sydneytrains">Sydney Trains</option>
+          </select>
+        </div>
+        <div class="status-pill">
+          <span id="vehicle-count">—</span> vehicles
+        </div>
+        <div class="status-pill">
+          Updated <span id="last-updated">—</span>
+        </div>
+        <button class="btn-icon" id="refresh-btn" onclick="refreshAll()" title="Refresh now">⟳</button>
+      </div>
+    </header>
+
+    <div id="alerts-bar" class="hidden">
+      <span class="alert-icon">⚠</span>
+      <span id="alerts-summary"></span>
+      <button class="alerts-toggle" onclick="toggleAlerts()">Details ▾</button>
+      <div id="alerts-detail" class="hidden"></div>
+    </div>
+
+    <div id="main">
+
+      <aside id="chat-panel">
+        <div id="chat-header">
+          <span>Ask the agent</span>
+        </div>
+        <div id="messages">
+          <div class="msg agent">
+            <div class="avatar">🤖</div>
+            <div class="bubble">
+              Hi! Ask me about live vehicle positions, upcoming departures, or service alerts for Metro and Sydney Trains.
+            </div>
+          </div>
+        </div>
+        <div id="chat-footer">
+          <input
+            id="chat-input"
+            type="text"
+            placeholder="e.g. Any delays on metro right now?"
+            onkeydown="if(event.key==='Enter') sendMessage()"
+          />
+          <button id="send-btn" onclick="sendMessage()">↑</button>
+        </div>
+      </aside>
+
+      <div id="map-container">
+        <div id="map"></div>
+        <div id="map-legend">
+          <div class="legend-item" id="legend-metro">
+            <span class="legend-dot" style="background:#009FDB"></span> Metro
+          </div>
+          <div class="legend-item" id="legend-sydneytrains" style="display:none">
+            <span class="legend-dot" style="background:#F5A623"></span> Sydney Trains
+          </div>
+        </div>
+        <div id="no-vehicles" class="hidden">
+          <div class="no-vehicles-msg">
+            <span>📡</span>
+            <p>No vehicles visible yet.</p>
+            <small>Start <code>test_realtime.py</code> to begin collecting live data.</small>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

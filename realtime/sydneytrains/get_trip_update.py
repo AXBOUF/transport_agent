@@ -10,12 +10,12 @@ sys_path_add = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 import sys
 if sys_path_add not in sys.path:
     sys.path.insert(0, sys_path_add)
-from parser import parse_trip_updates
+from pg_writer import write_trip_updates
 
 API_KEY = os.getenv("TRANSPORT_NSW_API_KEY")
 
 def fetch_sydneytrains_updates():
-    """Fetch sydneytrains trip updates and save to JSON file."""
+    """Fetch sydneytrains trip updates and write to PostgreSQL."""
     url = "https://api.transport.nsw.gov.au/v2/gtfs/realtime/sydneytrains"
     headers = {
         "Authorization": f"apikey {API_KEY}"
@@ -29,16 +29,7 @@ def fetch_sydneytrains_updates():
 
         data = MessageToDict(feed, preserving_proto_field_name=True)
 
-        # Parse and store directly in database (no JSON file)
-        import tempfile
-        import json as json_module
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as tmp:
-            json_module.dump(data, tmp)
-            tmp_path = tmp.name
-        
-        parse_trip_updates(tmp_path, "sydneytrains")
-        import os as os_module
-        os_module.unlink(tmp_path)  # Delete temp file
+        write_trip_updates(data, "sydneytrains")
         print(f"✅ Sydney Trains trip updates stored to database")
         return True
     except requests.exceptions.RequestException as e:

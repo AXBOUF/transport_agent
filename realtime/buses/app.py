@@ -3,7 +3,7 @@ Buses Real-Time Data Scheduler
 Schedules jobs to fetch buses alerts, updates, and vehicle positions
 """
 from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 
 from get_trip_alert import fetch_buses_alerts
@@ -21,34 +21,40 @@ def init_scheduler():
     """Initialize and configure the APScheduler"""
     scheduler = BackgroundScheduler()
     
-    # Schedule buses alerts - every 10 minutes
+    # Alerts - every 10 minutes
     scheduler.add_job(
         func=fetch_buses_alerts,
         trigger="interval",
         seconds=600,
         id='buses_alerts_job',
         name='Fetch Buses Alerts',
-        replace_existing=True
+        replace_existing=True,
     )
-    
-    # Schedule buses updates - every 30 seconds
+
+    # Trip updates - every 120s (buses feed is large, fetch takes >60s)
     scheduler.add_job(
         func=fetch_buses_updates,
         trigger="interval",
-        seconds=30,
+        seconds=120,
+        start_date=datetime.now() + timedelta(seconds=20),
         id='buses_updates_job',
         name='Fetch Buses Updates',
-        replace_existing=True
+        replace_existing=True,
+        coalesce=True,
+        max_instances=1,
     )
-    
-    # Schedule buses vehicle positions - every 30 seconds
+
+    # Vehicle positions - every 120s, staggered 60s after updates
     scheduler.add_job(
         func=fetch_buses_positions,
         trigger="interval",
-        seconds=30,
+        seconds=120,
+        start_date=datetime.now() + timedelta(seconds=80),
         id='buses_positions_job',
         name='Fetch Buses Positions',
-        replace_existing=True
+        replace_existing=True,
+        coalesce=True,
+        max_instances=1,
     )
     
     scheduler.start()

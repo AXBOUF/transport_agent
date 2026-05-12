@@ -15,9 +15,10 @@ def db_url(source: str = "metro") -> str:
     user     = os.getenv("POSTGRES_USERNAME", "postgres")
     password = os.getenv("POSTGRES_PASSWORD", "")
     db = {
-        "metro":     os.getenv("POSTGRES_DB_METRO", "metro"),
-        "transport": os.getenv("POSTGRES_DB_TRANSPORT", "transport"),
-        "buses":     os.getenv("POSTGRES_DB_BUSES", "buses"),
+        "metro":        os.getenv("POSTGRES_DB_METRO", "metro"),
+        "transport":    os.getenv("POSTGRES_DB_TRANSPORT", "transport"),
+        "buses":        os.getenv("POSTGRES_DB_BUSES", "buses"),
+        "sydneytrains": os.getenv("POSTGRES_DB_SYDNEYTRAINS", "sydneytrains"),
     }.get(source, os.getenv("POSTGRES_DATABASE", "metro"))
 
     return f"postgresql://{user}:{password}@{host}:{port}/{db}"

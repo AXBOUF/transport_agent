@@ -1,61 +1,67 @@
 from __future__ import annotations
 
-import json
-import re
+import os
 import sys
 from pathlib import Path
 
-import requests
+# Force UTF-8 output on Windows so arrow/emoji characters don't crash cp1252
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-from tools import run_tool, tools_prompt
+import anthropic
+from dotenv import load_dotenv
 
-# ── LLM ──────────────────────────────────────────────────────────────────────
+from tools import run_tool, ANTHROPIC_TOOLS
 
-LLM_URL = "https://www.munalbaraili.com/llm"
-LLM_HEADERS = {"x-api-key": "mysecretkey"}
-MODEL = "qwen2.5:7b"
+# ── Config ────────────────────────────────────────────────────────────────────
 
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+MODEL = "claude-haiku-4-5-20251001"
 
-def call_llm(prompt: str) -> str:
-    r = requests.post(LLM_URL, headers=LLM_HEADERS, timeout=60,
-                      json={"model": MODEL, "prompt": prompt, "stream": False})
-    r.raise_for_status()
-    return r.json()["response"]
+# ── System prompt ─────────────────────────────────────────────────────────────
 
-
-# ── Skill ─────────────────────────────────────────────────────────────────────
-
-_skill = (Path(__file__).parent / "skill.md").read_text()
-SYSTEM = f"{_skill}\n\n## Available tools\n{tools_prompt()}"
+SYSTEM = (Path(__file__).parent / "skill.md").read_text()
 
 
 # ── Agent loop ────────────────────────────────────────────────────────────────
 
 def run(question: str) -> str:
-    turns = [f"User: {question}"]
+    messages = [{"role": "user", "content": question}]
 
     for _ in range(10):
-        prompt = SYSTEM + "\n\n" + "\n".join(turns) + "\nAssistant:"
-        raw = call_llm(prompt)
+        response = client.messages.create(
+            model=MODEL,
+            max_tokens=4096,
+            system=SYSTEM,
+            tools=ANTHROPIC_TOOLS,
+            messages=messages,
+        )
 
-        match = re.search(r"\{.*\}", raw, re.DOTALL)
-        parsed = None
-        if match:
-            try:
-                parsed = json.loads(match.group())
-            except json.JSONDecodeError:
-                pass
+        if response.stop_reason == "end_turn":
+            for block in response.content:
+                if hasattr(block, "text"):
+                    return block.text
+            return "No response."
 
-        if parsed is None:
-            return raw.strip()
-        if "answer" in parsed:
-            return str(parsed["answer"])
-        if "tool" in parsed:
-            name = parsed["tool"]
-            print(f"  [tool: {name}]", flush=True)
-            result = run_tool(name, parsed.get("input", {}))
-            turns.append(f"Assistant: {raw.strip()}")
-            turns.append(f"Tool result: {result}")
+        if response.stop_reason == "tool_use":
+            messages.append({"role": "assistant", "content": response.content})
+            tool_results = []
+
+            for block in response.content:
+                if block.type == "tool_use":
+                    print(f"  [tool: {block.name}]", flush=True)
+                    result = run_tool(block.name, block.input)
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": result,
+                    })
+
+            messages.append({"role": "user", "content": tool_results})
+        else:
+            break
 
     return "Max steps reached."
 
@@ -63,7 +69,7 @@ def run(question: str) -> str:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    print("Minimal agent — Ctrl+C to quit\n")
+    print("Transport Agent (Claude Haiku) — Ctrl+C to quit\n")
     try:
         while True:
             q = input("You: ").strip()
@@ -71,7 +77,7 @@ if __name__ == "__main__":
                 break
             try:
                 print(f"\nAgent: {run(q)}\n")
-            except requests.RequestException as e:
-                print(f"LLM error: {e}\n", file=sys.stderr)
+            except anthropic.APIError as e:
+                print(f"API error: {e}\n", file=sys.stderr)
     except KeyboardInterrupt:
         pass

@@ -45,7 +45,7 @@ def create_database(db_name: str) -> None:
 def main() -> None:
     print("Setting up all databases (transport, metro, buses)...\n")
     
-    databases = ["transport", "metro", "buses"]
+    databases = ["transport", "metro", "buses", "sydneytrains"]
     for db_name in databases:
         create_database(db_name)
     
