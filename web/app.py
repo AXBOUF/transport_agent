@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 ROOT   = Path(__file__).resolve().parents[1]
@@ -26,6 +27,16 @@ from config import db_url       # noqa: E402
 import agent                    # noqa: E402
 
 app = FastAPI(title="Transport NSW Live")
+
+# Enable CORS for API endpoints
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
 app.mount("/static",       StaticFiles(directory=STATIC),           name="static")
 app.mount("/static/fonts", StaticFiles(directory=DESIGN / "fonts"), name="fonts")
 app.mount("/design",       StaticFiles(directory=DESIGN),           name="design")
