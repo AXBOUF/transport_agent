@@ -62,30 +62,5 @@ Where to find things (examples)
 - Frontend entry: [frontend/src/](frontend/src) and [frontend/package.json](frontend/package.json).
 - Agent entry: [transport_agent/agent.py](transport_agent/agent.py) and [transport_agent/tools.py](transport_agent/tools.py).
 
-Contributing
-- Fork or branch, follow the existing code style, and open a PR with a clear description of changes.
-- Add tests for new features and run `pytest` locally.
 
-Further notes
-- See `docs/` for in-repo documentation about GTFS conventions and platform design.
-- Keep environment secrets out of the repository; use `.env` or a secrets manager for production credentials.
 
-License
-- This repository does not include a license file by default; add one if you plan to publish or share the code.
-
-Contact / help
-- For questions about running or developing the project, open an issue or contact the repository maintainers.
-
-Updated README to summarise features, structure and quickstart.
-
-Resume / CV project summary
----------------------------
-Below are short, resume-ready descriptions and a slightly expanded summary you can copy into a CV or LinkedIn profile.
-
-- One-line (concise): Built a full-stack transport data platform that ingests GTFS and realtime feeds, stores them in Postgres, and exposes APIs with a React frontend and automation agent.
-
-- Short (1–2 lines): Developed a data pipeline and web platform to collect, normalise and serve GTFS and realtime public-transport data. Implemented Postgres schema and batched writers for realtime ingestion, a Vite/React frontend for visualization, and an experimental agent for automated queries and tooling.
-
-- Expanded (achievements): Designed and implemented end-to-end GTFS ingestion and realtime processing for multiple transport modes; built robust ingestion writers and parsers, added automated validation and tests, and delivered a developer-friendly frontend and agent tools. Useful CV metrics to add: dataset size (rows), ingestion throughput (messages/sec) or test coverage if available.
-
-Feel free to tell me which variant you prefer or supply metrics (rows, throughput, coverage) and I'll tailor the bullets further for your CV.
